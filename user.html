@@ -22,10 +22,25 @@
 </head>
 
 <div class="container" style="margin: 30 auto; width: 40%">
-	<div class="jumbotron">
+		<div class="jumbotron">
+			<div class="text-center">
+	<p style="margin-top:20px">Notes</p>
+	<br>
+		</div>
+		<br>
 		<div class="text-center">
-			<p style="margin-top:20px">User Details</p>
+			<button id="login" class="btn btn-default" onclick="myFunction()"> Create </button>
+			<button id="login" class="btn btn-default"> Update </button>
+			<button id="login" class="btn btn-default"> Delete </button>
 		</div>
 	</div>
 </div>
 
+<script>
+function myFunction() {
+  var btn = document.createElement("TEXT");
+  var t = document.createTextNode("CLICK ME");
+  btn.appendChild(t);
+  document.body.appendChild(btn);
+}
+</script>
