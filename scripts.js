@@ -26,4 +26,3 @@ function googleListener() {
 		alert(error)
 	});
 }
-
