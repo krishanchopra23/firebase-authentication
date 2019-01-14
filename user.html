@@ -2,45 +2,197 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 	<script src="./scripts.js"></script>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-	<link rel="stylesheet" href="./css/bootstrap-social.css">
+
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+	
 	<title>User Details</title>
 
-	<script src="https://www.gstatic.com/firebasejs/5.7.2/firebase.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/node-uuid/1.4.8/uuid.js"></script>
+	<script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+	
+	<script src="https://www.gstatic.com/firebasejs/5.7.3/firebase.js"></script>
 
 	<script>
-  		// Initialize Firebase
-  		var config = {
-    	apiKey: "AIzaSyCYtBOA8DD-2UJfG7YAT7WkvJP1Y2eIzb4",
-    	authDomain: "homework-1-21bac.firebaseapp.com",
-    	databaseURL: "https://homework-1-21bac.firebaseio.com",
-   		projectId: "homework-1-21bac",
-    	storageBucket: "homework-1-21bac.appspot.com",
-    	messagingSenderId: "993114569261"
-  	};
-  	firebase.initializeApp(config);
+	  // Initialize Firebase
+	  var config = {
+	    apiKey: "AIzaSyCYtBOA8DD-2UJfG7YAT7WkvJP1Y2eIzb4",
+	    authDomain: "homework-1-21bac.firebaseapp.com",
+	    databaseURL: "https://homework-1-21bac.firebaseio.com",
+	    projectId: "homework-1-21bac",
+	    storageBucket: "homework-1-21bac.appspot.com",
+	    messagingSenderId: "993114569261"
+	  };
+	  firebase.initializeApp(config);
 	</script>
+
+	<script>
+
+		function createNote() {
+			var uuid2 = uuid();
+			var titleOfNote = document.getElementById("noteTitle").value;
+			var description = document.getElementById("noteText").value;
+			console.log(`notes/${uuid2}`);
+			firebase.database().ref(`notes/${uuid2}`).set({
+				title: `${titleOfNote}`,
+				text: `${description}`,
+			})
+
+			document.getElementById("noteTitle").value = " ";
+			document.getElementById("noteText").value = " ";
+		}
+	
+		$(document).ready(function() {
+			getUser();
+			document.getElementById("btnsave").addEventListener("click", createNote, false);
+			readNote();
+		});
+
+
+		function getUser() {
+			firebase.auth().onAuthStateChanged(function(user) {
+				if(user) {
+					var email;
+					if(user != null) {
+						email = user.email;
+						document.getElementById("email").innerHTML = email;
+
+						displayName = user.displayName;
+						document.getElementById("name").innerHTML = displayName;
+					}
+				} else {
+					window.location.replace("./index.html")
+				}
+
+			})
+		}
+		
+		function readNote() {
+			firebase.database().ref('notes/').on('value', posts => {
+				notes = posts.val();
+				console.log(Object.keys(notes));
+				document.getElementById("listOfNotes").innerHTML = "";
+				Object.keys(notes).map((j, i) => {
+					var data = `<div class="card-body" id="${j}" onclick=showNote(event) data-toggle="modal" data-target="#modalNote" style="background: green: padding: 1 0 1 0;"><h2 class="text-center card-text">${notes[j].title}</h2></div>`
+					document.getElementById("listOfNotes").innerHTML += data;
+				})
+			});
+		}
+
+		function showNote(event) {
+			event.preventDefault();
+			document.getElementById("modalNoteTitle").innerHTML = `${notes[event.currentTarget.id].title}`;
+			document.getElementById("modalNoteText").innerHTML = `${notes[event.currentTarget.id].text}`;
+
+			$('#modalNote').data('postId', `${event.currentTarget.id}`)
+			console.log($('#modalNote').data('postId'));
+		}
+
+		function deleteNote(id) {
+			firebase.database().ref(`notes/${id}`).remove();
+			readNote();
+		}
+
+		function editNote() {
+			let titleOfNote = document.getElementById("editNoteTitle").value;
+			let description = document.getElementById("editNoteText").value;
+			let uuid = $('#modalNote').data('postId');
+			console.log(uuid);
+
+			firebase.database().ref(`notes/${uuid}`).set({
+				title: `${titleOfNote}`,
+				text: `${description}`,
+			})
+
+			readNote();
+		}
+
+		function showWindow() {
+			document.getElementById("editNoteTitle").value = `${notes[$('#modalNote').data('postId')].title}`;
+			document.getElementById("editNoteText").value = `${notes[$('#modalNote').data('postId')].text}`;
+		}
+		
+	</script>
+	
 </head>
 
+<h3 class="text-center"> Notes</h3>
 <div class="container" style="margin: 30 auto; width: 40%">
-		<div class="jumbotron">
-			<div class="text-center">
-	<p style="margin-top:20px">Notes</p>
-	<br>
-		</div>
-		<br>
-		<div class="text-center">
-			<button id="login" class="btn btn-default" onclick="myFunction()"> Create </button>
-			<button id="login" class="btn btn-default"> Update </button>
-			<button id="login" class="btn btn-default"> Delete </button>
-		</div>
-	</div>
+	<div class="jumbotron" id="listOfNotes">
+	</div>	
 </div>
 
-<script>
-function myFunction() {
-  var btn = document.createElement("TEXT");
-  var t = document.createTextNode("CLICK ME");
-  btn.appendChild(t);
-  document.body.appendChild(btn);
-}
-</script>
+<button type="button" class="btn btn-primary center-block" data-toggle="modal" data-target="#createNoteModal">
+  Create Note
+</button>
+
+<div class="modal fade" id="createNoteModal" tabindex="-1" role="dialog" aria-labelledby="createNoteModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLongTitle">Add a New Note</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="inputTitle"> Note Title</label>
+          <input class="form-control" id="noteTitle" placeholder="Title">
+        </div>
+        <div class="form-group">
+          <label for="inputText"> Note Text</label>
+          <input class="form-control" id="noteText" placeholder="Text">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="btnsave" data-dismiss="modal">Submit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editNoteModal">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-title text-center">
+				<h2> Edit Note </h2>
+			</div>
+			<div class="modal-body">
+				<div class="form-group">
+					<label for="inputTitle"> Note Title</label>
+          			<input class="form-control" id="editNoteTitle" placeholder="Title">
+          		</div>
+          		<div class="form-group">
+					<label for="inputText"> Note Text</label>
+          			<input class="form-control" id="editNoteText" placeholder="Title">
+          		</div>
+          	</div>
+         	<div class="modal-footer">
+        		<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        		<button type="button" class="btn btn-primary" onclick="editNote()" data-dismiss="modal">Submit</button>
+      		</div>
+      	</div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalNote" data-postId=" ">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+    	<div class="modal-title">
+  			<h2 id="modalNoteTitle">Modal Note Title</h5>
+  		</div>
+  		<br>
+      	<div class="modal-body">
+        	<h4 id="modalNoteText"> Modal Note Text</h5>
+      	</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="deleteNote($('#modalNote').data('postId'))">Delete</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-toggle="modal" data-target="#editNoteModal" onclick="showWindow()">Edit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
