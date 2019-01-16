@@ -83,13 +83,35 @@
 			document.getElementById("modalNoteTitle").innerHTML = `${notes[event.currentTarget.id].title}`;
 			document.getElementById("modalNoteText").innerHTML = `${notes[event.currentTarget.id].text}`;
 
+			titleOfNote = `${notes[event.currentTarget.id].title}`
+			description = `${notes[event.currentTarget.id].text}`
+			currentFileName = `${notes[event.currentTarget.id].image}`
+
 			$('#modalNote').data('postId', `${event.currentTarget.id}`)
+			refresh($('#modalNote').data('postId'));
 			console.log($('#modalNote').data('postId'));
 		}
 
 		function deleteNote(id) {
 			firebase.database().ref(`notes/${id}`).remove();
 			readNote();
+		}
+
+		function refresh(id) {
+			readNote();
+			var image = `${notes[id].image}`
+			let rootRef = firebase.storage().ref();
+			let fileRef = rootRef.child(`files/${$('#modalNote').data('postId')}`)
+
+			document.getElementById("filesModal").innerHTML = "";
+
+			fileRef.child(`/${image}`).getDownloadURL().then(function (url) {
+				console.log(url);
+				document.getElementById("filesModal").innerHTML = `<img id="modal_img" src="${url}" style="width: 75%; height: 75%;"</img>`;
+			}).catch(err => {
+				console.log(err)
+			});
+
 		}
 
 		function editNote() {
@@ -101,14 +123,47 @@
 			firebase.database().ref(`notes/${uuid}`).set({
 				title: `${titleOfNote}`,
 				text: `${description}`,
+				image: `${currentFileName}`,
 			})
-
+			titleOfNote = titleOfNote;
+			description = description;
 			readNote();
 		}
 
 		function showWindow() {
 			document.getElementById("editNoteTitle").value = `${notes[$('#modalNote').data('postId')].title}`;
 			document.getElementById("editNoteText").value = `${notes[$('#modalNote').data('postId')].text}`;
+		}
+
+		function uploadToFirebase(files) {
+			let rootRef = firebase.storage().ref();
+			let file = files[0]; 
+			let uuid2 = $('#modalNote').data('postId');
+			let fileRef = rootRef.child(`files/${$('#modalNote').data('postId')}/${file.name}`);
+
+			fileRef.put(file).then(function() {
+				console.log('your file was uploaded !');
+
+	
+				firebase.database().ref(`notes/${uuid2}`).set({
+					title: `${titleOfNote}`,
+					text: `${description}`,
+					image: file.name
+				});
+
+				currentFileName = file.name
+				refresh($('#modalNote').data('postId'));
+
+			}).catch(err => { console.log(err);
+			});	
+			/*
+			fileRef.getDownloadURL().then((url) => {
+				console.log(url);
+				var test = url;
+				alert(url);
+	            document.querySelector('img').src = test;
+	         */
+			
 		}
 		
 	</script>
@@ -185,14 +240,23 @@
   		<br>
       	<div class="modal-body">
         	<h4 id="modalNoteText"> Modal Note Text</h5>
+        	<div id="filesModal">
+        	</div>
       	</div>
+      	<body class="container">
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
         <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="deleteNote($('#modalNote').data('postId'))">Delete</button>
         <button type="button" class="btn btn-secondary" data-dismiss="modal" data-toggle="modal" data-target="#editNoteModal" onclick="showWindow()">Edit</button>
+        <div class="form-group" style="float-left">
+        	<label for="fileUpload">Upload File</label>
+        	<input id="fileUpload" type="file" onchange="uploadToFirebase(this.files)" style="display: inline"/>
+        </div>	
       </div>
     </div>
   </div>
 </div>
+
+
 
 
