@@ -31,8 +31,9 @@
 			var uuid2 = uuid();
 			var titleOfNote = document.getElementById("noteTitle").value;
 			var description = document.getElementById("noteText").value;
-			console.log(`notes/${uuid2}`);
-			firebase.database().ref(`notes/${uuid2}`).set({
+			
+			//console.log(firebase.auth().currentUser.uid);
+			firebase.database().ref(`${firebase.auth().currentUser.uid}/notes/${uuid2}`).set({
 				title: `${titleOfNote}`,
 				text: `${description}`,
 			})
@@ -44,32 +45,14 @@
 		$(document).ready(function() {
 			getUser();
 			document.getElementById("btnsave").addEventListener("click", createNote, false);
-			readNote();
+			
 		});
 
-
-		function getUser() {
-			firebase.auth().onAuthStateChanged(function(user) {
-				if(user) {
-					var email;
-					if(user != null) {
-						email = user.email;
-						document.getElementById("email").innerHTML = email;
-
-						displayName = user.displayName;
-						document.getElementById("name").innerHTML = displayName;
-					}
-				} else {
-					window.location.replace("./index.html")
-				}
-
-			})
-		}
-		
 		function readNote() {
-			firebase.database().ref('notes/').on('value', posts => {
+			console.log("calling function");
+			firebase.database().ref(`${firebase.auth().currentUser.uid}/notes/`).on('value', posts => {
 				notes = posts.val();
-				console.log(Object.keys(notes));
+				console.log(firebase.auth().currentUser.uid);
 				document.getElementById("listOfNotes").innerHTML = "";
 				Object.keys(notes).map((j, i) => {
 					var data = `<div class="card-body" id="${j}" onclick=showNote(event) data-toggle="modal" data-target="#modalNote" style="background: green: padding: 1 0 1 0;"><h2 class="text-center card-text">${notes[j].title}</h2></div>`
@@ -78,8 +61,28 @@
 			});
 		}
 
+
+		function getUser() {
+			firebase.auth().onAuthStateChanged(function(user) {
+				if(user) {
+					
+					if(user != null) {
+						
+						//document.getElementById("btnsave").addEventListener("click", createNote, false);
+						readNote();
+					}
+				} else {
+					window.location.replace("./index.html")
+					currentUser = null;
+				}
+
+			})
+		}
+	
 		function showNote(event) {
 			event.preventDefault();
+			document.getElementById("fileUpload").value =  '';
+			document.getElementById("uploadImageProgress").style.visibility = 'hidden';
 			document.getElementById("modalNoteTitle").innerHTML = `${notes[event.currentTarget.id].title}`;
 			document.getElementById("modalNoteText").innerHTML = `${notes[event.currentTarget.id].text}`;
 
@@ -93,7 +96,7 @@
 		}
 
 		function deleteNote(id) {
-			firebase.database().ref(`notes/${id}`).remove();
+			firebase.database().ref(`${firebase.auth().currentUser.uid}/notes/${id}`).remove();
 			readNote();
 		}
 
@@ -101,7 +104,8 @@
 			readNote();
 			var image = `${notes[id].image}`
 			let rootRef = firebase.storage().ref();
-			let fileRef = rootRef.child(`files/${$('#modalNote').data('postId')}`)
+			let fileRef = rootRef.child(`${firebase.auth().currentUser.uid}/files/${$('#modalNote').data('postId')}`)
+			console.log(firebase.auth().currentUser.uid);
 
 			document.getElementById("filesModal").innerHTML = "";
 
@@ -119,8 +123,9 @@
 			let description = document.getElementById("editNoteText").value;
 			let uuid = $('#modalNote').data('postId');
 			console.log(uuid);
+			console.log(firebase.auth().currentUser.uid);
 
-			firebase.database().ref(`notes/${uuid}`).set({
+			firebase.database().ref(`${firebase.auth().currentUser.uid}/notes/${uuid}`).set({
 				title: `${titleOfNote}`,
 				text: `${description}`,
 				image: `${currentFileName}`,
@@ -139,30 +144,33 @@
 			let rootRef = firebase.storage().ref();
 			let file = files[0]; 
 			let uuid2 = $('#modalNote').data('postId');
-			let fileRef = rootRef.child(`files/${$('#modalNote').data('postId')}/${file.name}`);
+			let fileRef = rootRef.child(`${firebase.auth().currentUser.uid}/files/${$('#modalNote').data('postId')}/${file.name}`);
 
-			fileRef.put(file).then(function() {
+			document.getElementById("uploadImageProgress").style.visibility = 'visible';
+
+			fileRef.put(file).on('state_changed', (function(snapshot) {
+				var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+				console.log(progress);
+				document.getElementById("uploadImageProgress").innerHTML = 'Upload Progress: ${progress.toFixed(3)}%';
+
+
+			}, function(error) {
+				console.log(error);
+			}, function() {
 				console.log('your file was uploaded !');
+				document.getElementById("uploadImageProgress").innerHTML = "File load successful";
 
-	
-				firebase.database().ref(`notes/${uuid2}`).set({
+				firebase.database().ref(`${firebase.auth().currentUser.uid}/notes/${uuid2}`).set({
 					title: `${titleOfNote}`,
 					text: `${description}`,
 					image: file.name
 				});
 
+
 				currentFileName = file.name
 				refresh($('#modalNote').data('postId'));
 
-			}).catch(err => { console.log(err);
-			});	
-			/*
-			fileRef.getDownloadURL().then((url) => {
-				console.log(url);
-				var test = url;
-				alert(url);
-	            document.querySelector('img').src = test;
-	         */
+			}));
 			
 		}
 		
@@ -251,6 +259,8 @@
         <div class="form-group" style="float-left">
         	<label for="fileUpload">Upload File</label>
         	<input id="fileUpload" type="file" onchange="uploadToFirebase(this.files)" style="display: inline"/>
+        	<br>
+        	<a style="display: inline; visibility: hidden;" id="uploadImageProgress">x%</a>
         </div>	
       </div>
     </div>
